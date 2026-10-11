@@ -3,6 +3,8 @@
 Tool web lokal (zero-dependency) untuk membuat caption TikTok dan menganalisa akun TikTok,
 ditenagai gateway LLM lokal `9router`. Tidak ada data yang dikirim keluar selain ke gateway lokal.
 
+> 📖 **Panduan penggunaan lengkap:** [`docs/panduan-penggunaan.md`](docs/panduan-penggunaan.md)
+
 ## Menjalankan
 
 1. Pastikan gateway 9router aktif di `http://127.0.0.1:20128`.
