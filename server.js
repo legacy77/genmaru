@@ -6,6 +6,24 @@ const { createStore } = require('./lib/history');
 const { chat, chatVision, mapError } = require('./lib/llm');
 const prompts = require('./lib/prompts');
 
+function log(level, msg) {
+  const line = `[${new Date().toISOString()}][${level}] ${msg}`;
+  if (level === 'ERROR') console.error(line);
+  else console.log(line);
+}
+
+async function logGateway(label, fn) {
+  const start = Date.now();
+  try {
+    const out = await fn();
+    log('INFO', `Gateway OK ${label} model=${out && out.model} ${Date.now() - start}ms`);
+    return out;
+  } catch (err) {
+    log('ERROR', `Gateway GAGAL ${label} ${Date.now() - start}ms: ${err && err.message ? err.message : err}`);
+    throw err;
+  }
+}
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -70,6 +88,14 @@ function createServer(config, opts = {}) {
   return http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
     const p = url.pathname;
+    const start = Date.now();
+
+    log('INFO', `Request masuk ${req.method} ${p}`);
+    res.on('finish', () => {
+      if (p.startsWith('/api/')) {
+        log('INFO', `Respons API ${req.method} ${p} status=${res.statusCode} ${Date.now() - start}ms`);
+      }
+    });
 
     try {
       if (p === '/api/health' && req.method === 'GET') {
@@ -78,7 +104,7 @@ function createServer(config, opts = {}) {
 
       if (p === '/api/models' && req.method === 'GET') {
         try {
-          const r = await fetch(`${config.gateway.baseURL}/models`, { headers: { Authorization: `Bearer ${config.gateway.apiKey}` } });
+          const r = await logGateway('GET /models', () => fetch(`${config.gateway.baseURL}/models`, { headers: { Authorization: `Bearer ${config.gateway.apiKey}` } }));
           const j = await r.json();
           return sendJson(res, 200, { models: (j.data || []).map((m) => m.id) });
         } catch (err) {
@@ -93,14 +119,17 @@ function createServer(config, opts = {}) {
       if (p.startsWith('/api/history/') && req.method === 'DELETE') {
         const id = p.split('/').pop();
         if (!id) return sendJson(res, 400, { error: 'ID riwayat tidak valid' });
-        return sendJson(res, 200, { removed: store.remove(id) });
+        const removed = store.remove(id);
+        log('INFO', `Hapus history id=${id} removed=${removed}`);
+        return sendJson(res, 200, { removed });
       }
 
       if (p === '/api/caption' && req.method === 'POST') {
         const body = await readBody(req);
         const { system, user } = prompts.captionPrompt(body);
-        const { content, model } = await chat(config, { model: body.model, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] });
+        const { content, model } = await logGateway(`POST ${p}`, () => chat(config, { model: body.model, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] }));
         const entry = store.add({ type: 'caption', input: body, output: content, model });
+        log('INFO', `Tulis history type=caption id=${entry.id}`);
         return sendJson(res, 200, { result: content, model, entry });
       }
 
@@ -113,22 +142,24 @@ function createServer(config, opts = {}) {
         const { system, user } = prompts.videoCaptionPrompt({ ...body, frameCount: frames.length });
         let content, model, fallback = null;
         try {
-          const out = await chatVision(config, { model: body.model, text: `${system}\n\n${user}`, images: frames });
+          const out = await logGateway(`POST ${p} vision`, () => chatVision(config, { model: body.model, text: `${system}\n\n${user}`, images: frames }));
           content = out.content; model = out.model;
         } catch (visionErr) {
-          const out = await chat(config, { messages: [{ role: 'system', content: system }, { role: 'user', content: user }] });
+          const out = await logGateway(`POST ${p} teks-fallback`, () => chat(config, { messages: [{ role: 'system', content: system }, { role: 'user', content: user }] }));
           content = out.content; model = out.model;
           fallback = 'vision-gagal-mode-teks';
         }
         const entry = store.add({ type: 'caption-video', input: { ...body, frames: frames.length }, output: content, model });
+        log('INFO', `Tulis history type=caption-video id=${entry.id}`);
         return sendJson(res, 200, { result: content, model, entry, fallback });
       }
 
       if (TEXT_ROUTES[p] && req.method === 'POST') {
         const body = await readBody(req);
         const { system, user } = TEXT_ROUTES[p](body);
-        const { content, model } = await chat(config, { model: body.model, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] });
+        const { content, model } = await logGateway(`POST ${p}`, () => chat(config, { model: body.model, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] }));
         const entry = store.add({ type: p.replace('/api/analyze/', 'analyze-'), input: body, output: content, model });
+        log('INFO', `Tulis history type=${entry.type} id=${entry.id}`);
         return sendJson(res, 200, { result: content, model, entry });
       }
 
@@ -137,6 +168,7 @@ function createServer(config, opts = {}) {
       return sendJson(res, 404, { error: 'Not found' });
     } catch (err) {
       const { status, message } = mapError(err);
+      log('ERROR', `Error tak terduga ${req.method} ${p}: ${err && err.stack ? err.stack : err}`);
       return sendJson(res, status, { error: message });
     }
   });
@@ -147,6 +179,7 @@ if (require.main === module) {
   createServer(config).listen(config.port, () => {
     console.log(`Genmaru jalan di http://localhost:${config.port}`);
     console.log(`Gateway: ${config.gateway.baseURL}`);
+    log('INFO', `Server start port=${config.port} gateway=${config.gateway.baseURL}`);
   });
 }
 
