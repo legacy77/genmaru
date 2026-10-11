@@ -1,6 +1,66 @@
-node_modules/
-data/
+# ===== Genmaru =====
+
+# Config rahasia (JANGAN pernah commit)
 config.json
+
+# Data lokal / riwayat
+data/
+
+# ===== Dependency =====
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# ===== Sisa kerja AI / agent =====
+.superpowers/
+.opencode/
+.claude/
+.cursor/
+.aider*
+.codeium/
+.continue/
+.windsurf/
+CLAUDE.md
+AGENTS.md
+GEMINI.md
+.copilot/
+# Catatan & scratch kerja
+*.ai-notes
+*.scratch
+tmp/
+temp/
+.cache/
+
+# ===== Log & output sementara =====
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 *.tmp
 *.bak
-.superpowers/
+*.orig
+*.rej
+.tmp-*
+
+# ===== Editor & IDE =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# ===== Build & artefak =====
+dist/
+build/
+out/
+coverage/
+.nyc_output/
