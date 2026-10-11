@@ -75,6 +75,7 @@
     ['#ap-submit', '/api/analyze/profile', '#ap-result', () => ({ bio: $('#ap-bio').value, niche: $('#ap-niche').value, target: $('#ap-target').value })],
     ['#ac-submit', '/api/analyze/caption', '#ac-result', () => ({ captions: $('#ac-captions').value, hashtags: $('#ac-hashtags').value, metrics: $('#ac-metrics').value })],
     ['#as-submit', '/api/analyze/strategy', '#as-result', () => ({ postingHistory: $('#as-history').value })],
+    ['#at-submit', '/api/analyze/trend', '#at-result', () => ({ niche: $('#at-niche').value, topics: $('#at-topics').value })],
   ];
   analyze.forEach(([btnSel, path, resSel, gather]) => {
     $(btnSel).addEventListener('click', () => {
