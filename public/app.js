@@ -98,18 +98,25 @@
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       let i = 0;
+      const onError = () => settle(() => reject(new Error('Video tidak bisa dibaca browser')));
+      const settle = (fn) => {
+        video.removeEventListener('seeked', onSeeked);
+        video.removeEventListener('error', onError);
+        fn();
+      };
       const seekNext = () => {
-        if (i >= count) return resolve(frames);
+        if (i >= count) return settle(() => resolve(frames));
         const t = duration * FRAME_POSITIONS[i % FRAME_POSITIONS.length];
         video.currentTime = Math.min(t, duration - 0.05);
         i++;
+        video.addEventListener('seeked', onSeeked, { once: true });
       };
-      video.addEventListener('seeked', () => {
+      const onSeeked = () => {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         frames.push(canvas.toDataURL('image/jpeg', 0.7));
         seekNext();
-      });
-      video.addEventListener('error', () => reject(new Error('Video tidak bisa dibaca browser')));
+      };
+      video.addEventListener('error', onError);
       seekNext();
     });
   }
@@ -136,6 +143,10 @@
   });
 
   $('#video-submit').addEventListener('click', () => {
+    if (extractedFrames.length === 0) {
+      setStatus('Pilih video dulu sampai frame siap', true);
+      return;
+    }
     call('/api/caption/video', {
       frames: extractedFrames,
       transcript: $('#video-transcript').value,
@@ -149,16 +160,20 @@
 
   // History
   async function loadHistory() {
-    const { entries } = await (await fetch('/api/history')).json();
-    const list = $('#history-list');
-    list.innerHTML = '';
-    (entries || []).forEach((en) => {
-      const div = document.createElement('div');
-      div.className = 'history-item';
-      div.innerHTML = `<div class="meta">${en.type} · ${new Date(en.createdAt).toLocaleString('id-ID')} · ${en.model || ''}</div><pre></pre>`;
-      div.querySelector('pre').textContent = en.output;
-      list.appendChild(div);
-    });
+    try {
+      const { entries } = await (await fetch('/api/history')).json();
+      const list = $('#history-list');
+      list.innerHTML = '';
+      (entries || []).forEach((en) => {
+        const div = document.createElement('div');
+        div.className = 'history-item';
+        div.innerHTML = `<div class="meta">${en.type} · ${new Date(en.createdAt).toLocaleString('id-ID')} · ${en.model || ''}</div><pre></pre>`;
+        div.querySelector('pre').textContent = en.output;
+        list.appendChild(div);
+      });
+    } catch (err) {
+      setStatus(`Gagal memuat riwayat: ${err.message}`, true);
+    }
   }
   $('#history-refresh').addEventListener('click', loadHistory);
 
