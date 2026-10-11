@@ -1,0 +1,2 @@
+# Fixture directory: intentionally contains no config.json.
+# Used by test/config.test.js to exercise default resolution.

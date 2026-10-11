@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Genmaru — TikTok Caption & Analyzer</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Genmaru</h1>
+    <span class="sub">TikTok Caption Generator &amp; Account Analyzer</span>
+    <div class="controls">
+      <select id="model-select"><option value="">(model default)</option></select>
+      <span id="status" class="status"></span>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button data-tab="generator" class="active">Generator</button>
+    <button data-tab="video">Video → Caption</button>
+    <button data-tab="analyze-video">Analisa Video</button>
+    <button data-tab="analyze-profile">Analisa Profil</button>
+    <button data-tab="analyze-caption">Analisa Caption</button>
+    <button data-tab="analyze-strategy">Strategi &amp; Tren</button>
+    <button data-tab="history">Riwayat</button>
+  </nav>
+
+  <main>
+    <section id="tab-generator" class="panel active">
+      <h2>Generate Caption</h2>
+      <div class="grid">
+        <label>Topik <input id="gen-topic" placeholder="mis. kopi susu gula aren" /></label>
+        <label>Niche <input id="gen-niche" placeholder="mis. kuliner" /></label>
+        <label>Tone <input id="gen-tone" value="santai" /></label>
+        <label>Audiens <input id="gen-audience" value="anak muda" /></label>
+        <label>Jumlah <input id="gen-count" type="number" value="5" min="1" max="10" /></label>
+      </div>
+      <button id="gen-submit" class="primary">Generate</button>
+      <pre id="gen-result" class="result"></pre>
+    </section>
+
+    <section id="tab-video" class="panel">
+      <h2>Upload Video → Caption</h2>
+      <p class="hint">Video tidak diunggah ke server. Browser mengekstrak 3 frame untuk dianalisa AI. Maks 50 MB, format mp4/webm.</p>
+      <input id="video-file" type="file" accept="video/mp4,video/webm" />
+      <video id="video-preview" controls hidden></video>
+      <div id="video-frames" class="frames"></div>
+      <div class="grid">
+        <label>Transkrip (opsional) <textarea id="video-transcript" placeholder="Tempel transkrip/isi suara video di sini (opsional, membantu AI)"></textarea></label>
+        <label>Topik <input id="video-topic" /></label>
+        <label>Niche <input id="video-niche" /></label>
+        <label>Tone <input id="video-tone" value="santai" /></label>
+        <label>Jumlah <input id="video-count" type="number" value="5" min="1" max="10" /></label>
+      </div>
+      <button id="video-submit" class="primary">Generate dari Video</button>
+      <pre id="video-result" class="result"></pre>
+    </section>
+
+    <section id="tab-analyze-video" class="panel">
+      <h2>Analisa Performa Video</h2>
+      <label>Deskripsi video <textarea id="av-desc"></textarea></label>
+      <label>Metrik (views, likes, komentar, watch time) <textarea id="av-metrics"></textarea></label>
+      <button id="av-submit" class="primary">Analisa</button>
+      <pre id="av-result" class="result"></pre>
+    </section>
+
+    <section id="tab-analyze-profile" class="panel">
+      <h2>Optimasi Profil &amp; Bio</h2>
+      <label>Bio saat ini <textarea id="ap-bio"></textarea></label>
+      <label>Niche <input id="ap-niche" /></label>
+      <label>Target audiens <input id="ap-target" /></label>
+      <button id="ap-submit" class="primary">Analisa</button>
+      <pre id="ap-result" class="result"></pre>
+    </section>
+
+    <section id="tab-analyze-caption" class="panel">
+      <h2>Analisa Caption &amp; Hashtag</h2>
+      <label>Caption yang dipakai <textarea id="ac-captions"></textarea></label>
+      <label>Hashtag yang dipakai <textarea id="ac-hashtags"></textarea></label>
+      <label>Metrik <textarea id="ac-metrics"></textarea></label>
+      <button id="ac-submit" class="primary">Analisa</button>
+      <pre id="ac-result" class="result"></pre>
+    </section>
+
+    <section id="tab-analyze-strategy" class="panel">
+      <h2>Strategi Posting &amp; Tren</h2>
+      <label>Histori posting (tanggal, jam, performa) <textarea id="as-history"></textarea></label>
+      <button id="as-submit" class="primary">Analisa Strategi</button>
+      <pre id="as-result" class="result"></pre>
+
+      <h3>Ide Konten &amp; Tren</h3>
+      <label>Niche <input id="at-niche" /></label>
+      <label>Topik yang diminati <textarea id="at-topics"></textarea></label>
+      <button id="at-submit" class="primary">Analisa Tren</button>
+      <pre id="at-result" class="result"></pre>
+    </section>
+
+    <section id="tab-history" class="panel">
+      <h2>Riwayat</h2>
+      <select id="history-filter">
+        <option value="">(semua)</option>
+        <option value="caption">caption</option>
+        <option value="caption-video">caption-video</option>
+        <option value="analyze-video">analyze-video</option>
+        <option value="analyze-profile">analyze-profile</option>
+        <option value="analyze-caption">analyze-caption</option>
+        <option value="analyze-strategy">analyze-strategy</option>
+        <option value="analyze-trend">analyze-trend</option>
+      </select>
+      <button id="history-refresh">Muat ulang</button>
+      <div id="history-list"></div>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
