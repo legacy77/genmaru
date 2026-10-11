@@ -155,20 +155,46 @@
       tone: $('#video-tone').value,
       count: Number($('#video-count').value) || 5,
       model: model(),
-    }, $('#video-result'), $('#video-submit'));
+    }, $('#video-result'), $('#video-submit')).then((json) => {
+      if (json && json.fallback) {
+        setStatus('Catatan: vision gagal, caption dibuat dari transkrip (mode teks)', true);
+      }
+    });
   });
 
   // History
   async function loadHistory() {
     try {
-      const { entries } = await (await fetch('/api/history')).json();
+      const filter = $('#history-filter').value;
+      const qs = filter ? `?type=${encodeURIComponent(filter)}` : '';
+      const { entries } = await (await fetch(`/api/history${qs}`)).json();
       const list = $('#history-list');
       list.innerHTML = '';
       (entries || []).forEach((en) => {
         const div = document.createElement('div');
         div.className = 'history-item';
-        div.innerHTML = `<div class="meta">${en.type} · ${new Date(en.createdAt).toLocaleString('id-ID')} · ${en.model || ''}</div><pre></pre>`;
-        div.querySelector('pre').textContent = en.output;
+
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.textContent = `${en.type} · ${new Date(en.createdAt).toLocaleString('id-ID')} · ${en.model || ''}`;
+
+        const del = document.createElement('button');
+        del.textContent = 'Hapus';
+        del.addEventListener('click', async () => {
+          try {
+            await fetch(`/api/history/${encodeURIComponent(en.id)}`, { method: 'DELETE' });
+            loadHistory();
+          } catch (err) {
+            setStatus(`Gagal menghapus: ${err.message}`, true);
+          }
+        });
+
+        const out = document.createElement('pre');
+        out.textContent = en.output;
+
+        div.appendChild(meta);
+        div.appendChild(del);
+        div.appendChild(out);
         list.appendChild(div);
       });
     } catch (err) {
@@ -176,6 +202,25 @@
     }
   }
   $('#history-refresh').addEventListener('click', loadHistory);
+  $('#history-filter').addEventListener('change', loadHistory);
+
+  // Copy buttons for every result block
+  document.querySelectorAll('.result').forEach((el) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = 'Copy';
+    btn.className = 'copy-btn';
+    btn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(el.textContent);
+        setStatus('Caption disalin');
+        setTimeout(() => setStatus(''), 1500);
+      } catch {
+        setStatus('Gagal menyalin', true);
+      }
+    });
+    el.insertAdjacentElement('afterend', btn);
+  });
 
   loadModels();
   loadHistory();

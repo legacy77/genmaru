@@ -7,7 +7,7 @@ ditenagai gateway LLM lokal `9router`. Tidak ada data yang dikirim keluar selain
 
 ## Menjalankan
 
-1. Pastikan gateway 9router aktif di `http://127.0.0.1:20128`.
+1. Pastikan gateway 9router aktif di `http://127.0.0.1:20128/v1`.
 2. Salin `config.example.json` menjadi `config.json` dan isi `gateway.apiKey`
    (atau set environment variable `GENMARU_API_KEY`; server juga bisa membaca
    key dari `~/.config/opencode/opencode.json`).

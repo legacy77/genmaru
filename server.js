@@ -92,6 +92,7 @@ function createServer(config, opts = {}) {
 
       if (p.startsWith('/api/history/') && req.method === 'DELETE') {
         const id = p.split('/').pop();
+        if (!id) return sendJson(res, 400, { error: 'ID riwayat tidak valid' });
         return sendJson(res, 200, { removed: store.remove(id) });
       }
 
@@ -105,18 +106,22 @@ function createServer(config, opts = {}) {
 
       if (p === '/api/caption/video' && req.method === 'POST') {
         const body = await readBody(req);
+        if (body.frames !== undefined && !Array.isArray(body.frames)) {
+          return sendJson(res, 400, { error: 'frames harus berupa array' });
+        }
         const frames = body.frames || [];
         const { system, user } = prompts.videoCaptionPrompt({ ...body, frameCount: frames.length });
-        let content, model;
+        let content, model, fallback = null;
         try {
           const out = await chatVision(config, { model: body.model, text: `${system}\n\n${user}`, images: frames });
           content = out.content; model = out.model;
         } catch (visionErr) {
           const out = await chat(config, { messages: [{ role: 'system', content: system }, { role: 'user', content: user }] });
           content = out.content; model = out.model;
+          fallback = 'vision-gagal-mode-teks';
         }
         const entry = store.add({ type: 'caption-video', input: { ...body, frames: frames.length }, output: content, model });
-        return sendJson(res, 200, { result: content, model, entry });
+        return sendJson(res, 200, { result: content, model, entry, fallback });
       }
 
       if (TEXT_ROUTES[p] && req.method === 'POST') {
@@ -127,6 +132,7 @@ function createServer(config, opts = {}) {
         return sendJson(res, 200, { result: content, model, entry });
       }
 
+      if (req.method === 'GET' && p.startsWith('/api/')) return sendJson(res, 404, { error: 'Not found' });
       if (req.method === 'GET') return serveStatic(res, publicDir, p);
       return sendJson(res, 404, { error: 'Not found' });
     } catch (err) {
