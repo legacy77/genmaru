@@ -5,6 +5,8 @@
   function setStatus(msg, isErr) {
     status.textContent = msg || '';
     status.classList.toggle('err', !!isErr);
+    const ok = !isErr && !!msg && /selesai|siap|disalin|dimuat/i.test(msg);
+    status.classList.toggle('ok', ok);
   }
 
   // Tabs
@@ -22,8 +24,20 @@
     return v || undefined;
   }
 
+  function setBusy(button, resultEl, busy) {
+    if (button) {
+      button.disabled = busy;
+      button.classList.toggle('is-loading', busy);
+      if (busy && !button.dataset.label) button.dataset.label = button.textContent;
+    }
+    if (resultEl) resultEl.classList.toggle('is-loading', busy);
+  }
+
   async function call(path, body, resultEl, button) {
-    if (button) button.disabled = true;
+    const original = button ? button.textContent : '';
+    if (button) button.dataset.label = original;
+    setBusy(button, resultEl, true);
+    if (resultEl) resultEl.textContent = '';
     setStatus('Memproses…');
     try {
       const res = await fetch(path, {
@@ -40,7 +54,7 @@
       resultEl.textContent = '';
       setStatus(err.message, true);
     } finally {
-      if (button) button.disabled = false;
+      setBusy(button, resultEl, false);
     }
   }
 
@@ -88,7 +102,7 @@
   const FRAME_POSITIONS = [0.2, 0.5, 0.8];
   let extractedFrames = [];
 
-  function extractFrames(video, count) {
+  function extractFrames(video, count, onProgress) {
     return new Promise((resolve, reject) => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
@@ -114,11 +128,22 @@
       const onSeeked = () => {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         frames.push(canvas.toDataURL('image/jpeg', 0.7));
+        if (onProgress) onProgress(frames.length, count);
         seekNext();
       };
       video.addEventListener('error', onError);
       seekNext();
     });
+  }
+
+  function renderFrameSkeletons(count) {
+    const wrap = $('#video-frames');
+    wrap.innerHTML = '';
+    for (let k = 0; k < count; k++) {
+      const d = document.createElement('div');
+      d.className = 'frame-skel';
+      wrap.appendChild(d);
+    }
   }
 
   $('#video-file').addEventListener('change', async (e) => {
@@ -129,14 +154,17 @@
     preview.src = URL.createObjectURL(file);
     preview.hidden = false;
     extractedFrames = [];
-    $('#video-frames').innerHTML = '';
-    setStatus('Mengekstrak frame…');
+    renderFrameSkeletons(3);
+    setStatus('Mengekstrak frame 0/3…');
     preview.addEventListener('loadedmetadata', async () => {
       try {
-        extractedFrames = await extractFrames(preview, 3);
+        extractedFrames = await extractFrames(preview, 3, (done, total) => {
+          setStatus(`Mengekstrak frame ${done}/${total}…`);
+        });
         $('#video-frames').innerHTML = extractedFrames.map((f) => `<img src="${f}" />`).join('');
         setStatus(`${extractedFrames.length} frame siap`);
       } catch (err) {
+        $('#video-frames').innerHTML = '';
         setStatus(`${err.message}. Isi transkrip manual sebagai gantinya.`, true);
       }
     }, { once: true });
@@ -164,11 +192,15 @@
 
   // History
   async function loadHistory() {
+    const btn = $('#history-refresh');
+    const list = $('#history-list');
+    btn.disabled = true;
+    btn.classList.add('is-loading');
+    list.innerHTML = '<div class="history-skel"></div><div class="history-skel"></div>';
     try {
       const filter = $('#history-filter').value;
       const qs = filter ? `?type=${encodeURIComponent(filter)}` : '';
       const { entries } = await (await fetch(`/api/history${qs}`)).json();
-      const list = $('#history-list');
       list.innerHTML = '';
       (entries || []).forEach((en) => {
         const div = document.createElement('div');
@@ -197,8 +229,15 @@
         div.appendChild(out);
         list.appendChild(div);
       });
+      if (!entries || entries.length === 0) {
+        list.innerHTML = '<p class="hint">Belum ada riwayat. Hasil generate dan analisa akan tersimpan di sini.</p>';
+      }
     } catch (err) {
+      list.innerHTML = '';
       setStatus(`Gagal memuat riwayat: ${err.message}`, true);
+    } finally {
+      btn.disabled = false;
+      btn.classList.remove('is-loading');
     }
   }
   $('#history-refresh').addEventListener('click', loadHistory);

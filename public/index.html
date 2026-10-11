@@ -8,15 +8,20 @@
 </head>
 <body>
   <header class="topbar">
-    <h1>Genmaru</h1>
-    <span class="sub">TikTok Caption Generator &amp; Account Analyzer</span>
+    <div class="brand">
+      <span class="logo-mark" aria-hidden="true">G</span>
+      <div>
+        <h1>Genmaru</h1>
+        <span class="sub">TikTok Caption Generator &amp; Account Analyzer</span>
+      </div>
+    </div>
     <div class="controls">
-      <select id="model-select"><option value="">(model default)</option></select>
-      <span id="status" class="status"></span>
+      <select id="model-select" aria-label="Pilih model"><option value="">(model default)</option></select>
+      <span id="status" class="status" role="status" aria-live="polite"></span>
     </div>
   </header>
 
-  <nav class="tabs">
+  <nav class="tabs" aria-label="Navigasi fitur">
     <button data-tab="generator" class="active">Generator</button>
     <button data-tab="video">Video → Caption</button>
     <button data-tab="analyze-video">Analisa Video</button>
