@@ -6,6 +6,9 @@ const { createStore } = require('./lib/history');
 const { chat, chatVision, mapError } = require('./lib/llm');
 const prompts = require('./lib/prompts');
 
+// Set GENMARU_LOG=verbose untuk juga mencatat request file statis.
+const VERBOSE = process.env.GENMARU_LOG === 'verbose';
+
 function log(level, msg) {
   const line = `[${new Date().toISOString()}][${level}] ${msg}`;
   if (level === 'ERROR') console.error(line);
@@ -16,10 +19,10 @@ async function logGateway(label, fn) {
   const start = Date.now();
   try {
     const out = await fn();
-    log('INFO', `Gateway OK ${label} model=${out && out.model} ${Date.now() - start}ms`);
+    log('INFO', `${label} -> ${out && out.model} (${Date.now() - start}ms)`);
     return out;
   } catch (err) {
-    log('ERROR', `Gateway GAGAL ${label} ${Date.now() - start}ms: ${err && err.message ? err.message : err}`);
+    log('ERROR', `${label} GAGAL (${Date.now() - start}ms): ${err && err.message ? err.message : err}`);
     throw err;
   }
 }
@@ -90,12 +93,12 @@ function createServer(config, opts = {}) {
     const p = url.pathname;
     const start = Date.now();
 
-    log('INFO', `Request masuk ${req.method} ${p}`);
-    res.on('finish', () => {
-      if (p.startsWith('/api/')) {
-        log('INFO', `Respons API ${req.method} ${p} status=${res.statusCode} ${Date.now() - start}ms`);
-      }
-    });
+    const isApi = p.startsWith('/api/');
+    if (isApi || VERBOSE) {
+      res.on('finish', () => {
+        log('INFO', `${req.method} ${p} ${res.statusCode} (${Date.now() - start}ms)`);
+      });
+    }
 
     try {
       if (p === '/api/health' && req.method === 'GET') {
